@@ -1,0 +1,104 @@
+{
+  "training": {
+    "model_name": "openai/gpt-oss-20b",
+    "max_sequence_length": 2048,
+    "datasets": [
+      {
+        "name": "Travel Conversations Dataset",
+        "source": "huggingface",
+        "dataset_name": "soniawmeyer/travel-conversations-finetuning",
+        "file_name": "conversational_sample_processed_with_topic.csv",
+        "format": "csv",
+        "priority": 1,
+        "description": "680MB CSV - Conversational travel data with topics",
+        "preprocessing": {
+          "text_column": "conversation",
+          "topic_column": "topic",
+          "min_length": 50,
+          "max_length": 2048
+        }
+      },
+      {
+        "name": "Travel QA Dataset", 
+        "source": "huggingface",
+        "dataset_name": "soniawmeyer/travel-conversations-finetuning",
+        "file_name": "travel_QA_processed_with_topic.csv",
+        "format": "csv",
+        "priority": 2,
+        "description": "147MB CSV - Question-answer pairs for travel topics",
+        "preprocessing": {
+          "question_column": "question",
+          "answer_column": "answer",
+          "topic_column": "topic",
+          "min_length": 20,
+          "max_length": 1024
+        }
+      }
+    ],
+    "parameters": {
+      "max_steps_per_dataset": 1000,
+      "learning_rate": 2e-4,
+      "batch_size": 4,
+      "gradient_accumulation_steps": 8,
+      "warmup_steps": 100,
+      "save_steps": 100,
+      "eval_steps": 50,
+      "logging_steps": 10,
+      "train_split": 0.9,
+      "fp16": true,
+      "gradient_checkpointing": true
+    },
+    "lora": {
+      "rank": 16,
+      "alpha": 32,
+      "dropout": 0.1,
+      "target_modules": [
+        "q_proj",
+        "k_proj", 
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "quantization": {
+      "load_in_4bit": true,
+      "bnb_4bit_use_double_quant": true,
+      "bnb_4bit_quant_type": "nf4",
+      "bnb_4bit_compute_dtype": "float16"
+    }
+  },
+  "modal": {
+    "app_name": "gpt-oss-finetune",
+    "image_name": "gpt-oss-finetune-image",
+    "gpu_config": {
+      "type": "H100",
+      "count": 1,
+      "memory": "80GB"
+    },
+    "timeout_hours": 12,
+    "volumes": {
+      "model_cache": "/root/.cache/huggingface",
+      "dataset_cache": "/root/.cache/datasets", 
+      "checkpoint_storage": "/root/checkpoints"
+    }
+  },
+  "api": {
+    "host": "localhost",
+    "port": 3000,
+    "websocket_port": 3001,
+    "cors_origins": ["http://localhost:3000"],
+    "rate_limit": {
+      "window_ms": 900000,
+      "max_requests": 100
+    }
+  },
+  "logging": {
+    "level": "info",
+    "file": "logs/app.log",
+    "max_size": "10MB",
+    "max_files": 5,
+    "console": true
+  }
+}

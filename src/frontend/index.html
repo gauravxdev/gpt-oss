@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT-OSS Fine-tuning Orchestrator</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <h1>🚀 GPT-OSS Fine-tuning Orchestrator</h1>
+                    <p class="subtitle">Sequential Multi-Dataset Fine-tuning with LoRA</p>
+                </div>
+                <div class="status-indicators">
+                    <div class="indicator" id="server-status">
+                        <span class="indicator-dot offline"></span>
+                        <span class="indicator-text">Connecting...</span>
+                    </div>
+                    <div class="indicator" id="queue-status">
+                        <span class="indicator-dot"></span>
+                        <span class="indicator-text">Queue: 0</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Navigation Tabs -->
+            <nav class="tab-navigation">
+                <button class="tab-btn active" data-tab="submit">Submit Job</button>
+                <button class="tab-btn" data-tab="dashboard">Dashboard</button>
+                <button class="tab-btn" data-tab="models">Models</button>
+                <button class="tab-btn" data-tab="queue">Queue</button>
+            </nav>
+
+            <!-- Tab Contents -->
+            <div class="tab-content active" id="submit-tab">
+                <div class="job-form-container">
+                    <h2>Start Multi-Dataset Fine-Tuning Job</h2>
+                    <form id="finetune-form">
+                        <!-- Model Configuration -->
+                        <div class="form-section">
+                            <h3>Model Configuration</h3>
+                            <div class="form-group">
+                                <label for="model_name">Model Name:</label>
+                                <select name="model_name" id="model_name">
+                                    <option value="openai/gpt-oss-20b">GPT-OSS 20B (Recommended)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="max_seq_length">Max Sequence Length:</label>
+                                <input type="number" name="max_seq_length" id="max_seq_length" value="2048" min="512" max="4096">
+                            </div>
+                        </div>
+
+                        <!-- Dataset Information -->
+                        <div class="form-section">
+                            <h3>Dataset Configuration</h3>
+                            <div class="datasets-info">
+                                <h4>Datasets to be processed sequentially:</h4>
+                                <div class="dataset-item">
+                                    <span class="dataset-priority">1.</span>
+                                    <div class="dataset-details">
+                                        <strong>Travel Conversations Dataset</strong>
+                                        <br><small>680MB CSV - Conversational travel data with topics</small>
+                                        <br><small>Source: soniawmeyer/travel-conversations-finetuning</small>
+                                    </div>
+                                </div>
+                                <div class="dataset-item">
+                                    <span class="dataset-priority">2.</span>
+                                    <div class="dataset-details">
+                                        <strong>Travel QA Dataset</strong>
+                                        <br><small>147MB CSV - Question-answer pairs for travel topics</small>
+                                        <br><small>Source: soniawmeyer/travel-conversations-finetuning</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="max_steps">Steps per Dataset:</label>
+                                <input type="number" name="max_steps" id="max_steps" value="1000" min="10" max="5000">
+                                <small>Number of training steps for each dataset</small>
+                            </div>
+                            
+                            <div class="form-group checkbox-group">
+                                <label>
+                                    <input type="checkbox" name="continue_on_failure" id="continue_on_failure" checked>
+                                    Continue processing next dataset if one fails
+                                </label>
+                                
+                                <label>
+                                    <input type="checkbox" name="merge_adapters" id="merge_adapters" checked>
+                                    Merge LoRA adapters from all datasets
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Training Parameters -->
+                        <div class="form-section">
+                            <h3>Training Parameters</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="learning_rate">Learning Rate:</label>
+                                    <input type="number" name="learning_rate" id="learning_rate" value="0.0002" step="0.0001" min="0.00001" max="0.01">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="batch_size">Batch Size:</label>
+                                    <select name="batch_size" id="batch_size">
+                                        <option value="1">1 (Memory Safe)</option>
+                                        <option value="2">2</option>
+                                        <option value="4" selected>4 (Recommended)</option>
+                                        <option value="8">8 (High Memory)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gradient_accumulation_steps">Gradient Accumulation Steps:</label>
+                                    <input type="number" name="gradient_accumulation_steps" id="gradient_accumulation_steps" value="8" min="1" max="32">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="warmup_steps">Warmup Steps:</label>
+                                    <input type="number" name="warmup_steps" id="warmup_steps" value="100" min="0" max="500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LoRA Configuration -->
+                        <div class="form-section">
+                            <h3>LoRA Configuration</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="lora_rank">LoRA Rank:</label>
+                                    <select name="lora_rank" id="lora_rank">
+                                        <option value="8">8 (Fast)</option>
+                                        <option value="16" selected>16 (Balanced)</option>
+                                        <option value="32">32 (High Quality)</option>
+                                        <option value="64">64 (Maximum)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="lora_alpha">LoRA Alpha:</label>
+                                    <input type="number" name="lora_alpha" id="lora_alpha" value="32" min="8" max="256">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="lora_dropout">LoRA Dropout:</label>
+                                <input type="number" name="lora_dropout" id="lora_dropout" value="0.1" step="0.05" min="0" max="0.5">
+                            </div>
+                        </div>
+
+                        <!-- GPU Configuration -->
+                        <div class="form-section">
+                            <h3>GPU Configuration</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gpu_type">GPU Type:</label>
+                                    <select name="gpu_type" id="gpu_type">
+                                        <option value="L40S">L40S (Cost Effective)</option>
+                                        <option value="H100" selected>H100 (High Performance)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="timeout_hours">Timeout (hours):</label>
+                                    <input type="number" name="timeout_hours" id="timeout_hours" value="12" min="2" max="24">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="submit-btn" id="submit-btn">
+                            <span class="btn-text">Start Multi-Dataset Fine-Tuning</span>
+                            <span class="btn-spinner" style="display: none;">⏳</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="tab-content" id="dashboard-tab">
+                <div class="dashboard-container">
+                    <h2>Training Dashboard</h2>
+                    
+                    <!-- Job Status Overview -->
+                    <div class="status-overview">
+                        <div class="status-card" id="job-status-card">
+                            <h3>Overall Job Status</h3>
+                            <span class="status-badge waiting" id="job-status">No Active Job</span>
+                            <p class="job-info" id="job-info">Submit a job to start monitoring</p>
+                        </div>
+                        
+                        <div class="status-card" id="dataset-progress-card">
+                            <h3>Dataset Progress</h3>
+                            <div class="dataset-status">
+                                <span class="current-dataset" id="current-dataset">Waiting to start...</span>
+                                <span class="dataset-counter" id="dataset-counter">0 / 2 datasets</span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-card" id="overall-progress-card">
+                            <h3>Overall Progress</h3>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="overall-progress-fill" style="width: 0%"></div>
+                            </div>
+                            <span class="progress-text" id="overall-progress-text">0% complete</span>
+                        </div>
+                        
+                        <div class="status-card" id="eta-card">
+                            <h3>ETA</h3>
+                            <span class="eta-text" id="eta-text">Calculating...</span>
+                        </div>
+                    </div>
+
+                    <!-- Current Dataset Progress -->
+                    <div class="current-dataset-section">
+                        <h3>Current Dataset Progress</h3>
+                        <div class="dataset-info-bar">
+                            <span class="dataset-name" id="dataset-name">--</span>
+                            <span class="dataset-size" id="dataset-size">--</span>
+                        </div>
+                        <div class="progress-bar dataset-progress-bar">
+                            <div class="progress-fill" id="dataset-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <span class="dataset-progress-text" id="dataset-progress-text">0 / 0 steps</span>
+                    </div>
+
+                    <!-- Training Metrics -->
+                    <div class="metrics-container">
+                        <div class="metric-card">
+                            <h4>Training Loss</h4>
+                            <div class="metric-value" id="train-loss">--</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <h4>Validation Loss</h4>
+                            <div class="metric-value" id="val-loss">--</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <h4>Learning Rate</h4>
+                            <div class="metric-value" id="learning-rate">--</div>
+                        </div>
+                        
+                        <div class="metric-card">
+                            <h4>GPU Utilization</h4>
+                            <div class="metric-value" id="gpu-util">--</div>
+                        </div>
+                    </div>
+
+                    <!-- Live Logs -->
+                    <div class="logs-container">
+                        <h3>Live Training Logs</h3>
+                        <div class="logs-output" id="training-logs"></div>
+                        <div class="logs-controls">
+                            <button id="clear-logs" class="btn-secondary">Clear Logs</button>
+                            <button id="auto-scroll" class="btn-secondary active">Auto Scroll</button>
+                        </div>
+                    </div>
+
+                    <!-- Job Controls -->
+                    <div class="job-controls">
+                        <button id="cancel-job" class="cancel-btn" disabled>Cancel Job</button>
+                        <button id="download-logs" class="download-btn">Download Logs</button>
+                        <button id="refresh-status" class="refresh-btn">Refresh Status</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="models-tab">
+                <div class="models-container">
+                    <h2>Fine-tuned Models</h2>
+                    <div class="models-list" id="models-list">
+                        <div class="empty-state">
+                            <p>No fine-tuned models available yet.</p>
+                            <p>Complete a fine-tuning job to see models here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content" id="queue-tab">
+                <div class="queue-container">
+                    <h2>Job Queue Status</h2>
+                    <div class="queue-stats" id="queue-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Queue Size:</span>
+                            <span class="stat-value" id="queue-size">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Processing:</span>
+                            <span class="stat-value" id="processing-status">None</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Estimated Wait:</span>
+                            <span class="stat-value" id="estimated-wait">0 hours</span>
+                        </div>
+                    </div>
+                    
+                    <div class="queue-list" id="queue-list">
+                        <div class="empty-state">
+                            <p>No jobs in queue.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <p>&copy; 2024 GPT-OSS Fine-tuning Orchestrator. Powered by Modal & Node.js</p>
+                <div class="footer-links">
+                    <a href="/api/docs" target="_blank">API Docs</a>
+                    <a href="/api/health" target="_blank">Health Check</a>
+                    <a href="https://modal.com" target="_blank">Modal</a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Notification Container -->
+    <div class="notification-container" id="notification-container"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Processing your request...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/websocket.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
